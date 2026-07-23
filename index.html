@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sterling Community Cup — Bangkok · 23 May 2026</title>
+<meta name="description" content="Live standings, brackets, and match results — Sterling Sport &amp; Wellness, Sukhumvit 24">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<style>
+  :root{
+    --ink:#10201C; --ink-2:#16302A; --cream:#F3F0E7;
+    --court:#175E56; --court-dark:#0E3F3A;
+    --lime:#D6FF3F; --coral:#FF6A4D;
+    --line:rgba(243,240,231,0.14); --line-soft:rgba(16,32,28,0.10);
+    --pink:#FF8FB1; --blue:#7FB8FF; --gold:#E9C46A;
+    --live:#FF5B5B;
+    --mono:'IBM Plex Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Bebas Neue',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--ink);color:var(--cream);font-family:var(--sans);-webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--lime);color:var(--ink);}
+  a{color:inherit;text-decoration:none;} button{font-family:inherit;cursor:pointer;}
+
+  .ticker-wrap{background:var(--court-dark);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;padding:8px 0;}
+  .ticker{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--lime);animation:scroll 28s linear infinite;padding-left:100%;}
+  .ticker span{margin-right:48px;color:var(--cream);opacity:.85;} .ticker span b{color:var(--lime);font-weight:600;}
+  @keyframes scroll{to{transform:translateX(-100%);}}
+  @media (prefers-reduced-motion: reduce){.ticker{animation:none;padding-left:0;}}
+
+  header{max-width:1120px;margin:0 auto;padding:32px 20px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:1px solid var(--line);}
+  .brandmark{display:flex;align-items:center;gap:12px;}
+  .brandmark .mark{width:44px;height:44px;border-radius:8px;background:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;color:var(--ink);flex:none;}
+  .brandmark .name{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream);opacity:.7;line-height:1.5;}
+  .brandmark .name strong{color:var(--lime);display:block;font-size:12px;letter-spacing:.1em;}
+
+  h1{font-family:var(--display);font-weight:400;font-size:clamp(36px,6vw,64px);line-height:.92;margin:12px 0 4px;max-width:1120px;padding:0 20px;}
+  h1 em{font-style:normal;color:var(--lime);}
+  .subline{max-width:1120px;margin:0 auto;padding:0 20px 22px;display:flex;gap:22px;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;color:var(--cream);opacity:.75;}
+  .subline b{color:var(--lime);opacity:1;}
+
+  .tabs{max-width:1120px;margin:0 auto;padding:0 20px;display:flex;gap:2px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--ink);z-index:20;overflow-x:auto;}
+  .tab{background:none;border:none;color:var(--cream);opacity:.5;font-family:var(--display);font-size:18px;letter-spacing:.03em;padding:14px 18px 12px;border-bottom:3px solid transparent;white-space:nowrap;transition:opacity .15s ease,border-color .15s ease;}
+  .tab:hover{opacity:.85;} .tab.active{opacity:1;border-color:var(--lime);}
+
+  main{max-width:1120px;margin:0 auto;padding:30px 20px 80px;}
+  section.panel{display:none;}
+  section.panel.active{display:block;animation:fade .3s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .section-label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--lime);opacity:.85;margin:0 0 14px;}
+  .category-title{font-family:var(--display);font-weight:400;font-size:30px;letter-spacing:.02em;margin:38px 0 6px;color:var(--cream);border-bottom:1px solid var(--line);padding-bottom:8px;}
+  .category-title:first-child{margin-top:0;}
+  .group-title{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.02em;margin:22px 0 12px;color:var(--lime);}
+
+  .clabel{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 9px;border-radius:20px;border:1px solid;}
+  .clabel.Male{color:var(--blue);border-color:var(--blue);}
+  .clabel.Female{color:var(--pink);border-color:var(--pink);}
+  .clabel.Mix{color:var(--gold);border-color:var(--gold);}
+  .category-title.Male{color:var(--blue);} .category-title.Female{color:var(--pink);} .category-title.Mix{color:var(--gold);}
+
+  /* ---- GROUPS ---- */
+  .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
+  .team-card{background:var(--court-dark);border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+  .team-card .tname{font-family:var(--display);font-size:20px;letter-spacing:.02em;color:var(--cream);margin-bottom:10px;}
+  .roster{display:flex;flex-direction:column;gap:8px;}
+  .player{display:flex;align-items:center;gap:8px;font-size:14px;}
+  .player .av{width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:600;border:1.5px solid;}
+  .player.f .av{border-color:var(--pink);color:var(--pink);} .player.m .av{border-color:var(--blue);color:var(--blue);}
+  .player .flag{margin-left:2px;font-size:13px;}
+
+  /* ---- STANDINGS: big legible sporty numbers ---- */
+  .standings{width:100%;border-collapse:collapse;background:var(--cream);color:var(--ink);border-radius:10px;overflow:hidden;margin-bottom:22px;}
+  .standings caption{text-align:left;font-family:var(--display);font-size:19px;letter-spacing:.02em;background:var(--court);color:var(--cream);padding:10px 16px;}
+  .standings th,.standings td{padding:8px 14px;text-align:left;border-bottom:1px solid var(--line-soft);}
+  .standings thead th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);opacity:.5;border-bottom:1px solid rgba(16,32,28,.25);}
+  .standings td.team{font-size:14px;font-weight:600;}
+  .standings td.num,.standings th.num{font-family:var(--display);font-size:19px;text-align:center;letter-spacing:.02em;padding:4px 10px;}
+  .standings th.num{font-family:var(--mono);font-size:9.5px;font-weight:400;}
+  .standings td.sep{font-family:var(--mono);font-size:11px;text-align:center;opacity:.35;padding:0;width:4px;}
+  .standings tbody tr:last-child td{border-bottom:none;}
+  .standings tbody tr.qual td.team{box-shadow:inset 3px 0 0 var(--lime); padding-left:11px;}
+
+  /* ---- SET-SCORE MATCH CARDS (playoffs) ---- */
+  .bracket-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+  .bmatch{background:var(--court-dark);border:1px solid var(--line);border-radius:10px;padding:14px;}
+  .bmatch .row{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--cream);opacity:.7;margin-bottom:10px;}
+  .live-dot{color:var(--live);}
+  .setscore{display:grid;grid-template-columns:1fr repeat(3,44px);align-items:center;gap:6px;}
+  .setscore .tn{font-size:14.5px;padding:5px 0;}
+  .setscore .tn.winner{font-weight:700;color:var(--lime);}
+  .setflap{font-family:var(--display);font-size:22px;text-align:center;background:var(--ink);border:1px solid var(--line);border-radius:5px;padding:1px 0;}
+  .setflap.win{color:var(--lime);border-color:var(--lime);}
+  .setflap.empty{opacity:.25;}
+  .tb-note{font-family:var(--mono);font-size:8.5px;text-align:center;opacity:.5;margin-top:1px;}
+  .bmatch hr{border:none;border-top:1px dashed var(--line);margin:6px 0;}
+  .badge{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;background:var(--lime);color:var(--ink);border-radius:10px;padding:2px 8px;margin-left:8px;}
+
+  /* ---- ALL MATCHES — compact, 5 courts ---- */
+  .court-cols{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+  @media (max-width:900px){.court-cols{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:520px){.court-cols{grid-template-columns:1fr;}}
+  .court-col .ctitle{font-family:var(--display);font-size:17px;color:var(--lime);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px;}
+  .cmatch{background:var(--court-dark);border:1px solid var(--line);border-radius:8px;padding:8px 9px;margin-bottom:8px;}
+  .cmatch.is-live{border-color:var(--live);}
+  .cmatch .meta{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:8.5px;opacity:.85;margin-bottom:5px;}
+  .cmatch .meta .live-tag{color:var(--live);font-weight:700;}
+  .cmatch .p{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:1px 0;gap:6px;}
+  .cmatch .p .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cmatch .p.win .nm{color:var(--lime);font-weight:700;}
+  .cmatch .p .sc{font-family:var(--mono);font-size:11px;opacity:.9;flex:none;}
+
+  footer{border-top:1px solid var(--line);padding:24px 20px 20px;max-width:1120px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+  .powered{font-family:var(--mono);font-size:11px;opacity:.55;letter-spacing:.05em;}
+  .qr-block{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;opacity:.7;}
+  .qr-block img{width:48px;height:48px;border-radius:6px;background:var(--cream);padding:4px;}
+  .updated{font-family:var(--mono);font-size:10.5px;opacity:.4;letter-spacing:.05em;max-width:1120px;margin:0 auto 20px;padding:0 20px;}
+</style>
+</head>
+<body>
+
+<div class="ticker-wrap"><div class="ticker" id="ticker">
+  <span><b>COURT 1</b> in progress</span><span><b>COURT 2</b> in progress</span>
+  <span><b>COURT 3</b> in progress</span><span>Sterling Sport &amp; Wellness · Sukhumvit 24</span>
+  <span><b>COURT 1</b> in progress</span><span><b>COURT 2</b> in progress</span>
+  <span><b>COURT 3</b> in progress</span><span>Sterling Sport &amp; Wellness · Sukhumvit 24</span>
+</div></div>
+
+<header>
+  <div class="brandmark"><div class="mark">S</div><div class="name">Sterling<br><strong>Sport &amp; Wellness</strong></div></div>
+  <div class="brandmark" style="opacity:.6;"><div class="name" style="text-align:right;">Padel Academy<br><strong>Community Cup</strong></div></div>
+</header>
+
+<h1>Community <em>Cup</em></h1>
+<div class="subline">
+  <span>📍 Sterling Sport &amp; Wellness — Sukhumvit 24</span>
+  <span>📅 <b>23 May 2026</b></span>
+  <span>🎾 Male · Female · Mix</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="groups" onclick="showTab('groups')">Groups</button>
+  <button class="tab" data-tab="standings" onclick="showTab('standings')">Standings</button>
+  <button class="tab" data-tab="playoffs" onclick="showTab('playoffs')">Play-offs</button>
+  <button class="tab" data-tab="allmatches" onclick="showTab('allmatches')">All Matches</button>
+</div>
+
+<main>
+  <section class="panel active" data-panel="groups"><p class="section-label">Groups</p><div id="groupsContent"></div></section>
+  <section class="panel" data-panel="standings"><p class="section-label">Group Stage — Standings</p><div id="standingsContent"></div></section>
+  <section class="panel" data-panel="playoffs"><p class="section-label">Play-offs</p><div id="playoffsContent"></div></section>
+  <section class="panel" data-panel="allmatches"><p class="section-label">All Matches — 5 Courts</p><div id="allMatchesContent"></div></section>
+</main>
+
+<footer>
+  <div class="powered">Powered by Sterling Sport &amp; Wellness — Padel Academy</div>
+  <div class="qr-block"><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://sterlingsportbkk.com/cup" alt="QR code"> Scan to follow live</div>
+</footer>
+<div class="updated">Last updated: <span id="ts"></span> — <span id="src">demo data</span></div>
+
+<script>
+/* =====================================================================
+   GOOGLE SHEETS CONFIG
+   =====================================================================
+   GROUPS    : category(Male/Female/Mix), group, team,
+               player1_name, player1_gender(M/F), player1_flag,
+               player2_name, player2_gender(M/F), player2_flag
+   STANDINGS : category, group, team, points, matches_w, matches_l, games_for, games_against
+   MATCHES   : id, round(R1/QF/SF/Final), court, time, team1, team2,
+               s1_t1, s1_t2, s1_tb,   <- set 1: games (or points), optional tiebreak note e.g. "7-5"
+               s2_t1, s2_t2, s2_tb,   <- set 2 (leave all blank if this round has only 1 set)
+               s3_t1, s3_t2, s3_tb    <- set 3 / super-tiebreak (leave blank if not played)
+               No "status" column needed — LIVE / FINISHED / SCHEDULED is computed automatically:
+               for each court, matches are sorted by time; any match with a score already
+               entered is FINISHED; the first one after that with no score yet is LIVE;
+               everything after that is SCHEDULED.
+   ===================================================================== */
+const CONFIG = {
+  SHEET_URLS: { groups:"", standings:"", matches:"" }
+};
+
+/* ===================== DEMO DATA ===================== */
+const DEMO = {
+  groups: [
+    {category:"Mix",group:"A",team:"Dares Srirungreang / Kasin Thumpothong", p1:{name:"Dares Srirungreang",gender:"F",flag:""}, p2:{name:"Kasin Thumpothong",gender:"M",flag:""}},
+    {category:"Mix",group:"B",team:"Thassha Vitayaviroj / Jakraraj Rungsaeng", p1:{name:"Thassha Vitayaviroj",gender:"F",flag:""}, p2:{name:"Jakraraj Rungsaeng",gender:"M",flag:""}},
+    {category:"Mix",group:"C",team:"Thipnet / Max Phillips", p1:{name:"Thipnet",gender:"F",flag:""}, p2:{name:"Max Phillips",gender:"M",flag:""}},
+    {category:"Mix",group:"D",team:"Pae Ketumarn / Amie Sett", p1:{name:"Pae Ketumarn",gender:"M",flag:""}, p2:{name:"Amie Sett",gender:"F",flag:""}},
+    {category:"Mix",group:"E",team:"Orn Ornsiri / Gap", p1:{name:"Orn Ornsiri",gender:"F",flag:""}, p2:{name:"Gap",gender:"M",flag:""}},
+    {category:"Mix",group:"A",team:"Pratheep / Suphavee Anandsongkit", p1:{name:"Pratheep",gender:"M",flag:""}, p2:{name:"Suphavee Anandsongkit",gender:"F",flag:""}},
+    {category:"Mix",group:"B",team:"Fai Kurujitkosol / Will confirm", p1:{name:"Fai Kurujitkosol",gender:"F",flag:""}, p2:{name:"Will confirm",gender:"M",flag:""}},
+    {category:"Mix",group:"C",team:"Apatsara Ketsupa / Jan Rommerskirchen", p1:{name:"Apatsara Ketsupa",gender:"F",flag:""}, p2:{name:"Jan Rommerskirchen",gender:"M",flag:""}},
+    {category:"Mix",group:"D",team:"Pornpawee Pramethong / Philip Westwood", p1:{name:"Pornpawee Pramethong",gender:"F",flag:""}, p2:{name:"Philip Westwood",gender:"M",flag:""}},
+    {category:"Mix",group:"E",team:"Jomjam Pimpicha / Natchapol Praditpetchara", p1:{name:"Jomjam Pimpicha",gender:"F",flag:""}, p2:{name:"Natchapol Praditpetchara",gender:"M",flag:""}},
+    {category:"Male",group:"A",team:"Max Phillips / Thipnit Sumsalee", p1:{name:"Max Phillips",gender:"M",flag:""}, p2:{name:"Thipnit Sumsalee",gender:"M",flag:""}},
+    {category:"Male",group:"B",team:"Bic Perform / Pun Tanchanpong", p1:{name:"Bic Perform",gender:"M",flag:""}, p2:{name:"Pun Tanchanpong",gender:"M",flag:""}},
+    {category:"Male",group:"C",team:"Pae Ketumarn / Jerry Yee", p1:{name:"Pae Ketumarn",gender:"M",flag:""}, p2:{name:"Jerry Yee",gender:"M",flag:""}},
+    {category:"Male",group:"D",team:"Pratheep / Vasant Srimanothip", p1:{name:"Pratheep",gender:"M",flag:""}, p2:{name:"Vasant Srimanothip",gender:"M",flag:""}},
+    {category:"Male",group:"A",team:"Jeffrey Moss / Luke Andrew", p1:{name:"Jeffrey Moss",gender:"M",flag:""}, p2:{name:"Luke Andrew",gender:"M",flag:""}},
+    {category:"Male",group:"B",team:"Kamol Narula / Shivam pawa", p1:{name:"Kamol Narula",gender:"M",flag:""}, p2:{name:"Shivam pawa",gender:"M",flag:""}},
+    {category:"Male",group:"C",team:"Vishesh Bhatia / Nitin pawa", p1:{name:"Vishesh Bhatia",gender:"M",flag:""}, p2:{name:"Nitin pawa",gender:"M",flag:""}},
+    {category:"Male",group:"D",team:"Philip Westwood / Matthew Westwood", p1:{name:"Philip Westwood",gender:"M",flag:""}, p2:{name:"Matthew Westwood",gender:"M",flag:""}},
+    {category:"Male",group:"A",team:"Natchapol Praditpetchara / Dian van End", p1:{name:"Natchapol Praditpetchara",gender:"M",flag:""}, p2:{name:"Dian van End",gender:"M",flag:""}},
+    {category:"Male",group:"B",team:"Voraphol Nithipitigan / Ob Suwanprateep", p1:{name:"Voraphol Nithipitigan",gender:"M",flag:""}, p2:{name:"Ob Suwanprateep",gender:"M",flag:""}},
+    {category:"Male",group:"C",team:"Changhoonlee / jaeheekim", p1:{name:"Changhoonlee",gender:"M",flag:""}, p2:{name:"jaeheekim",gender:"M",flag:""}},
+    {category:"Female",group:"A",team:"Dares Srirungreang / Thassha Vitayaviroj", p1:{name:"Dares Srirungreang",gender:"F",flag:""}, p2:{name:"Thassha Vitayaviroj",gender:"F",flag:""}},
+    {category:"Female",group:"B",team:"Maria Mellblom / Natasja van Gennip", p1:{name:"Maria Mellblom",gender:"F",flag:""}, p2:{name:"Natasja van Gennip",gender:"F",flag:""}},
+    {category:"Female",group:"C",team:"Nasibhat Kiatwatcharasri / Charttakarn Noreewan", p1:{name:"Nasibhat Kiatwatcharasri",gender:"F",flag:""}, p2:{name:"Charttakarn Noreewan",gender:"F",flag:""}},
+    {category:"Female",group:"D",team:"Amie Sett / Ying Kanittha", p1:{name:"Amie Sett",gender:"F",flag:""}, p2:{name:"Ying Kanittha",gender:"F",flag:""}},
+    {category:"Female",group:"A",team:"Orn Ornsiri / Pear", p1:{name:"Orn Ornsiri",gender:"F",flag:""}, p2:{name:"Pear",gender:"F",flag:""}},
+    {category:"Female",group:"B",team:"Fai Kurujitkosol / Melisa", p1:{name:"Fai Kurujitkosol",gender:"F",flag:""}, p2:{name:"Melisa",gender:"F",flag:""}},
+    {category:"Female",group:"C",team:"Mellissa Marfell / Sirada Karujitkosol", p1:{name:"Mellissa Marfell",gender:"F",flag:""}, p2:{name:"Sirada Karujitkosol",gender:"F",flag:""}},
+  ],
+  standings: [
+    {category:"Mix",group:"A",team:"Dares Srirungreang / Kasin Thumpothong",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"B",team:"Thassha Vitayaviroj / Jakraraj Rungsaeng",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"C",team:"Thipnet / Max Phillips",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"D",team:"Pae Ketumarn / Amie Sett",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"E",team:"Orn Ornsiri / Gap",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"A",team:"Pratheep / Suphavee Anandsongkit",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"B",team:"Fai Kurujitkosol / Will confirm",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"C",team:"Apatsara Ketsupa / Jan Rommerskirchen",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"D",team:"Pornpawee Pramethong / Philip Westwood",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Mix",group:"E",team:"Jomjam Pimpicha / Natchapol Praditpetchara",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"A",team:"Max Phillips / Thipnit Sumsalee",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"B",team:"Bic Perform / Pun Tanchanpong",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"C",team:"Pae Ketumarn / Jerry Yee",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"D",team:"Pratheep / Vasant Srimanothip",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"A",team:"Jeffrey Moss / Luke Andrew",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"B",team:"Kamol Narula / Shivam pawa",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"C",team:"Vishesh Bhatia / Nitin pawa",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"D",team:"Philip Westwood / Matthew Westwood",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"A",team:"Natchapol Praditpetchara / Dian van End",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"B",team:"Voraphol Nithipitigan / Ob Suwanprateep",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Male",group:"C",team:"Changhoonlee / jaeheekim",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Female",group:"A",team:"Dares Srirungreang / Thassha Vitayaviroj",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Female",group:"B",team:"Maria Mellblom / Natasja van Gennip",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Female",group:"C",team:"Nasibhat Kiatwatcharasri / Charttakarn Noreewan",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Female",group:"D",team:"Amie Sett / Ying Kanittha",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Female",group:"A",team:"Orn Ornsiri / Pear",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Female",group:"B",team:"Fai Kurujitkosol / Melisa",points:0,mw:0,ml:0,gf:0,ga:0},
+    {category:"Female",group:"C",team:"Mellissa Marfell / Sirada Karujitkosol",points:0,mw:0,ml:0,gf:0,ga:0},
+  ],
+  matches: [
+    // no matches played yet — draw & schedule pending
+  ]
+};
+
+/* ===================== LOAD ===================== */
+function fetchCsv(url){
+  return new Promise((resolve,reject)=>{
+    Papa.parse(url,{download:true,header:true,skipEmptyLines:true,complete:res=>resolve(res.data),error:reject});
+  });
+}
+function shapeGroups(rows){
+  return rows.map(r=>{
+    if(r.p1) return r;
+    return {category:r.category, group:r.group, team:r.team,
+      p1:{name:r.player1_name, gender:r.player1_gender, flag:r.player1_flag},
+      p2:{name:r.player2_name, gender:r.player2_gender, flag:r.player2_flag}};
+  });
+}
+function num(v){ return (v===""||v===undefined||v===null) ? null : +v; }
+
+async function loadData(){
+  const useSheets = CONFIG.SHEET_URLS.groups && CONFIG.SHEET_URLS.standings && CONFIG.SHEET_URLS.matches;
+  if(!useSheets){ document.getElementById('src').textContent='demo data'; return DEMO; }
+  try{
+    const [g,s,m] = await Promise.all([
+      fetchCsv(CONFIG.SHEET_URLS.groups), fetchCsv(CONFIG.SHEET_URLS.standings), fetchCsv(CONFIG.SHEET_URLS.matches)
+    ]);
+    document.getElementById('src').textContent='live — Google Sheets';
+    return {
+      groups: shapeGroups(g),
+      standings: s.map(r=>({category:r.category,group:r.group,team:r.team,points:+r.points,mw:+r.matches_w,ml:+r.matches_l,gf:+r.games_for,ga:+r.games_against})),
+      matches: m.map(r=>({...r,
+        s1t1:num(r.s1_t1),s1t2:num(r.s1_t2),s1tb:r.s1_tb||"",
+        s2t1:num(r.s2_t1),s2t2:num(r.s2_t2),s2tb:r.s2_tb||"",
+        s3t1:num(r.s3_t1),s3t2:num(r.s3_t2),s3tb:r.s3_tb||""}))
+    };
+  }catch(e){
+    console.error("Sheets fetch failed:", e);
+    document.getElementById('src').textContent='demo data (sheet fetch failed)';
+    return DEMO;
+  }
+}
+
+function buildLookups(data){
+  const teamCategory={}, teamGenders={};
+  data.groups.forEach(t=>{ teamCategory[t.team]=t.category; teamGenders[t.team]=[t.p1.gender,t.p2.gender]; });
+  return {teamCategory, teamGenders};
+}
+function matchLabel(team1,team2,lookups){
+  const g=[...(lookups.teamGenders[team1]||[]),...(lookups.teamGenders[team2]||[])];
+  if(g.length && g.every(x=>x==="M")) return "Male";
+  if(g.length && g.every(x=>x==="F")) return "Female";
+  return "Mix";
+}
+
+/* ===================== SET-SCORE ENGINE (generic — works for any round) ===================== */
+function setsOf(m){
+  return [[m.s1t1,m.s1t2,m.s1tb],[m.s2t1,m.s2t2,m.s2tb],[m.s3t1,m.s3t2,m.s3tb]];
+}
+function hasAnyScore(m){
+  return setsOf(m).some(([a,b])=> a!==null && a!=="" && b!==null && b!=="");
+}
+function matchResult(m){
+  // returns {sets: [{a,b,tb,winner}], setsWon:[n1,n2], winner: 1|2|null}
+  let w1=0,w2=0; const sets=[];
+  setsOf(m).forEach(([a,b,tb])=>{
+    const played = a!==null && a!=="" && b!==null && b!=="";
+    let winner = null;
+    if(played){ if(+a > +b) {winner=1; w1++;} else if(+b > +a){winner=2; w2++;} }
+    sets.push({a,b,tb,played,winner});
+  });
+  let winner = null;
+  if(w1>w2) winner=1; else if(w2>w1) winner=2;
+  return {sets, setsWon:[w1,w2], winner};
+}
+
+/* ===================== AUTO LIVE/FINISHED/SCHEDULED PER COURT ===================== */
+function timeToMinutes(t){
+  if(!t) return 0;
+  const [h,m] = String(t).split(':').map(Number);
+  return (h||0)*60 + (m||0);
+}
+function computeCourtStatuses(matches){
+  const byCourt = {};
+  matches.forEach(m=>{ (byCourt[m.court] = byCourt[m.court]||[]).push(m); });
+  const statusMap = {};
+  Object.values(byCourt).forEach(list=>{
+    list.sort((a,b)=>timeToMinutes(a.time)-timeToMinutes(b.time));
+    let liveAssigned = false;
+    list.forEach(m=>{
+      if(hasAnyScore(m)){ statusMap[m.id]='finished'; }
+      else if(!liveAssigned){ statusMap[m.id]='live'; liveAssigned = true; }
+      else { statusMap[m.id]='scheduled'; }
+    });
+  });
+  return statusMap;
+}
+
+/* ===================== RENDER ===================== */
+const CAT_ORDER=["Male","Female","Mix"];
+function sortedCategories(list){ return [...new Set(list)].sort((a,b)=>CAT_ORDER.indexOf(a)-CAT_ORDER.indexOf(b)); }
+
+function renderGroups(data){
+  const cats = sortedCategories(data.groups.map(t=>t.category));
+  let html="";
+  cats.forEach(cat=>{
+    html += `<h2 class="category-title ${cat}">${cat} <span class="clabel ${cat}">${cat}</span></h2>`;
+    const gs = [...new Set(data.groups.filter(t=>t.category===cat).map(t=>t.group))].sort();
+    gs.forEach(g=>{
+      html += `<h3 class="group-title">Group ${g}</h3><div class="team-grid">`;
+      data.groups.filter(t=>t.category===cat && t.group===g).forEach(t=>{
+        html += `<div class="team-card"><div class="tname">${t.team}</div><div class="roster">`;
+        [t.p1,t.p2].forEach(p=>{
+          html += `<div class="player ${p.gender==='F'?'f':'m'}"><span class="av">${(p.name||'').slice(0,2).toUpperCase()}</span>${p.name}<span class="flag">${p.flag||''}</span></div>`;
+        });
+        html += `</div></div>`;
+      });
+      html += `</div>`;
+    });
+  });
+  document.getElementById('groupsContent').innerHTML = html;
+}
+
+function renderStandings(data){
+  const cats = sortedCategories(data.standings.map(s=>s.category));
+  let html="";
+  cats.forEach(cat=>{
+    html += `<h2 class="category-title ${cat}">${cat} <span class="clabel ${cat}">${cat}</span></h2>`;
+    const gs=[...new Set(data.standings.filter(s=>s.category===cat).map(s=>s.group))].sort();
+    gs.forEach(g=>{
+      const rows=data.standings.filter(s=>s.category===cat && s.group===g).sort((a,b)=>b.points-a.points);
+      html += `<table class="standings"><caption>Group ${g}</caption>
+        <thead><tr><th>Team</th><th class="num">Игр</th><th class="num">В</th><th class="num">П</th><th class="num">Гем+</th><th class="num">Гем−</th></tr></thead><tbody>`;
+      rows.forEach((r,i)=>{
+        html += `<tr class="${i<2?'qual':''}"><td class="team">${r.team}</td>
+          <td class="num">${r.mw+r.ml}</td><td class="num">${r.mw}</td><td class="num">${r.ml}</td>
+          <td class="num">${r.gf}</td><td class="num">${r.ga}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+    });
+  });
+  document.getElementById('standingsContent').innerHTML = html;
+}
+
+function setFlaps(sets){
+  return sets.map(s=>{
+    if(!s.played) return {a:'—',b:'—',empty:true};
+    return {a:s.a, b:s.b, tb:s.tb, empty:false};
+  });
+}
+function bmatchCard(m, statusMap){
+  const res = matchResult(m);
+  const flapsA = setFlaps(res.sets).map(f=>({v:f.empty?'—':f.a, tb:f.tb, empty:f.empty}));
+  const flapsB = setFlaps(res.sets).map(f=>({v:f.empty?'—':f.b, tb:f.tb, empty:f.empty}));
+  const w1 = res.winner===1, w2 = res.winner===2;
+  const badge = (m.round==="Final") ? `<span class="badge">Champion</span>` : '';
+  const status = statusMap[m.id];
+  return `<div class="bmatch">
+    <div class="row"><span>COURT ${m.court} · ${m.time}</span><span>${status==='live'?'<span class="live-dot">● LIVE</span>':status==='finished'?'FINISHED':'SCHEDULED'}</span></div>
+    <div class="setscore">
+      <div class="tn ${w1?'winner':''}">${m.team1}${w1?badge:''}</div>
+      ${flapsA.map(f=>`<div><div class="setflap ${!f.empty && f.v===Math.max(...flapsA.filter(x=>!x.empty).map(x=>+x.v||0))&&w1?'win':''} ${f.empty?'empty':''}">${f.v}</div>${f.tb?`<div class="tb-note">TB ${f.tb}</div>`:''}</div>`).join('')}
+      <div class="tn ${w2?'winner':''}">${m.team2}${w2?badge:''}</div>
+      ${flapsB.map(f=>`<div><div class="setflap ${!f.empty && w2 ?'win':''} ${f.empty?'empty':''}">${f.v}</div>${f.tb?`<div class="tb-note">TB ${f.tb}</div>`:''}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderPlayoffs(data, lookups, statusMap){
+  const rounds = ["QF","SF","Final"];
+  const pms = data.matches.filter(m=>rounds.includes(m.round));
+  const cats = sortedCategories(pms.map(m=>lookups.teamCategory[m.team1]));
+  let html="";
+  cats.forEach(cat=>{
+    const ms = pms.filter(m=>lookups.teamCategory[m.team1]===cat);
+    if(!ms.length) return;
+    html += `<h2 class="category-title ${cat}">${cat} <span class="clabel ${cat}">${cat}</span></h2>`;
+    rounds.forEach(rnd=>{
+      const rms = ms.filter(m=>m.round===rnd);
+      if(!rms.length) return;
+      const label = rnd==="QF"?"Quarter-Finals":rnd==="SF"?"Semi-Finals":"Final";
+      html += `<h3 class="group-title">${label}</h3><div class="bracket-grid">`;
+      rms.forEach(m=> html += bmatchCard(m, statusMap));
+      html += `</div>`;
+    });
+  });
+  document.getElementById('playoffsContent').innerHTML = html || '<p style="opacity:.6">No play-off matches yet.</p>';
+}
+
+function scoreSummary(m){
+  const res = matchResult(m);
+  return res.sets.filter(s=>s.played).map(s=>`${s.a}-${s.b}`).join(', ') || '—';
+}
+function renderAllMatches(data, lookups, statusMap){
+  const courts = [...new Set(data.matches.map(m=>m.court))].sort();
+  let html = `<div class="court-cols">`;
+  courts.forEach(c=>{
+    html += `<div class="court-col"><div class="ctitle">Court ${c}</div>`;
+    data.matches.filter(m=>m.court===c).sort((a,b)=>timeToMinutes(a.time)-timeToMinutes(b.time)).forEach(m=>{
+      const res = matchResult(m);
+      const label = matchLabel(m.team1, m.team2, lookups);
+      const status = statusMap[m.id];
+      const summary = scoreSummary(m);
+      html += `<div class="cmatch ${status==='live'?'is-live':''}">
+        <div class="meta"><span class="clabel ${label}">${label}</span>
+          <span>${status==='live'?'<span class="live-tag">● LIVE</span>':m.time}</span></div>
+        <div class="p ${res.winner===1?'win':''}"><span class="nm">${m.team1}</span><span class="sc">${status==='scheduled'?'':summary.split(',')[0]||''}</span></div>
+        <div class="p ${res.winner===2?'win':''}"><span class="nm">${m.team2}</span><span class="sc">${status==='scheduled'?'':''}</span></div>
+        ${status!=='scheduled' && res.sets.some(s=>s.played) ? `<div style="font-family:var(--mono);font-size:9px;opacity:.6;margin-top:3px;">${summary}</div>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  html += `</div>`;
+  document.getElementById('allMatchesContent').innerHTML = html;
+}
+
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.dataset.panel===name));
+}
+
+/* ===================== INIT ===================== */
+document.getElementById('ts').textContent = new Date().toLocaleString('en-GB',{hour12:false});
+loadData().then(data=>{
+  const lookups = buildLookups(data);
+  const statusMap = computeCourtStatuses(data.matches);
+  renderGroups(data);
+  renderStandings(data);
+  renderPlayoffs(data, lookups, statusMap);
+  renderAllMatches(data, lookups, statusMap);
+});
+</script>
+</body>
+</html>
